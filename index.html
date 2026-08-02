@@ -210,13 +210,13 @@
 
     <!-- Botões Fixos -->
     <div class="side-buttons">
-        <button class="toggle-btn inv-btn" onclick="openNotes()" title="Anotações Gerais">🕮</button>
+        <button class="toggle-btn inv-btn" onclick="openNotes()" title="Anotações Gerais">📖</button>
     </div>
 
     <!-- OVERLAY DAS ANOTAÇÕES GERAIS -->
     <div id="notes-overlay" class="overlay">
         <div class="overlay-header">
-            <h1 class="overlay-title">Anotações Gerais 🕮</h1>
+            <h1 class="overlay-title">Anotações Gerais 📖</h1>
             <button class="close-overlay-btn" onclick="closeNotes()">Voltar às Cartas</button>
         </div>
         
@@ -236,7 +236,7 @@
 
     <script>
         // ========================================================
-        // 🕮 SISTEMA DE ANOTAÇÕES GERAIS 🕮
+        // 📖 SISTEMA DE ANOTAÇÕES GERAIS 📖
         // ========================================================
         let globalNotes = JSON.parse(localStorage.getItem('myNotes')) || { race: "", class: "", text: "" };
 
