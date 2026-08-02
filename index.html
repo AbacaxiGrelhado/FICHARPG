@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cartas de Personagens</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-wrap: wrap;
+            padding: 40px;
+            gap: 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        /* Botão Flutuante (Anotações) */
+        .side-buttons {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .toggle-btn {
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.2s, background-color 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .toggle-btn:hover {
+            transform: scale(1.1);
+        }
+        .inv-btn {
+            background-color: #00bfff;
+            color: #1a1a1a;
+        }
+        .inv-btn:hover { background-color: #33ccff; }
+
+
+        /* OVERLAY (Anotações) */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(20, 20, 20, 0.98);
+            z-index: 200;
+            display: none; 
+            flex-direction: column;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+        .overlay-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid #555; padding-bottom: 20px; margin-bottom: 30px;
+        }
+        .overlay-title { font-size: 36px; color: #00bfff; margin: 0; text-transform: uppercase; letter-spacing: 2px; }
+        .close-overlay-btn {
+            background: #ff4444; color: white; border: none; border-radius: 10px;
+            padding: 10px 20px; font-size: 18px; cursor: pointer; font-weight: bold;
+        }
+        .close-overlay-btn:hover { background: #ff6666; }
+
+        /* Área de Anotações (Raça, Classe, Texto) */
+        .notes-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            gap: 20px;
+        }
+        .notes-header-inputs {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+        }
+        .notes-header-inputs input {
+            flex: 1;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            font-size: 18px;
+            padding: 15px;
+            border-radius: 10px;
+            outline: none;
+            text-align: left;
+        }
+        .notes-textarea {
+            flex-grow: 1;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: white;
+            font-size: 16px;
+            padding: 20px;
+            border-radius: 10px;
+            outline: none;
+            resize: none;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+        .notes-textarea::-webkit-scrollbar { width: 8px; }
+        .notes-textarea::-webkit-scrollbar-track { background: transparent; }
+        .notes-textarea::-webkit-scrollbar-thumb { background-color: #555; border-radius: 5px; }
+
+
+        /* === ESTILOS DAS CARTAS === */
+        .card {
+            background-color: #2a2a2a; width: 250px; border-radius: 15px; padding: 20px;
+            display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5); position: relative;
+        }
+        .action-btns { position: absolute; top: 10px; right: 10px; display: none; gap: 8px; z-index: 10; }
+        .card:hover .action-btns { display: flex; }
+        .action-btn { color: white; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-weight: bold; display: flex; justify-content: center; align-items: center; font-size: 14px; transition: transform 0.1s; }
+        .action-btn:hover { transform: scale(1.1); }
+        .delete-btn { background: #ff4444; }
+        .hide-btn { background: #555; }
+
+        .hidden-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; border-radius: 15px; background-color: #2a2a2a; z-index: 5; transition: opacity 0.3s; }
+        .hidden-card .hidden-overlay { opacity: 1; pointer-events: auto; }
+        .hidden-overlay .question-mark { font-size: 150px; color: rgba(255, 255, 255, 0.05); position: absolute; user-select: none; transition: opacity 0.2s; }
+        .hidden-overlay .hover-name { font-size: 24px; font-weight: bold; text-align: center; padding: 20px; opacity: 0; z-index: 6; transition: opacity 0.2s; pointer-events: none; word-wrap: break-word; }
+        .hidden-card:hover .question-mark { opacity: 0; }
+        .hidden-card:hover .hover-name { opacity: 1; }
+        .card-content { display: flex; flex-direction: column; align-items: center; width: 100%; transition: opacity 0.3s; }
+        .hidden-card .card-content { opacity: 0; pointer-events: none; }
+
+        input[type="text"], input[type="number"], textarea { background: transparent; border: none; color: white; outline: none; }
+        input[type="text"] { text-align: center; width: 100%; }
+        input::placeholder, textarea::placeholder { color: rgba(255, 255, 255, 0.4); }
+
+        .char-name { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+        .char-alias { font-size: 14px; margin-bottom: 15px; font-style: italic; }
+
+        .image-container { width: 200px; height: 200px; background-color: #111; border-radius: 10px; margin-bottom: 15px; position: relative; cursor: pointer; overflow: hidden; display: flex; justify-content: center; align-items: center; border: 2px dashed #555; }
+        .image-container img { width: 100%; height: 100%; object-fit: cover; display: none; }
+        .image-container span { color: #777; font-size: 14px; pointer-events: none; }
+        .file-input { display: none; }
+
+        /* Vitals (Vida e Mana) e Dado Central */
+        /* Flex centralizado para o Dado e Número */
+        .dice-row { display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 10px; width: 100%; }
+        .dice-icon { cursor: pointer; user-select: none; transition: color 0.2s; display: inline-block; text-align: center; }
+        .dice-icon:hover { color: #aaa; }
+        .dice-row input { width: 50px; font-size: 24px; margin: 0 5px; }
+
+        .vitals-row { display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 20px; font-size: 16px; font-weight: bold; }
+        .vital-input { width: 30px !important; text-align: center; font-size: 14px; border-bottom: 1px solid #555 !important; margin: 0 2px; }
+        .vital-separator { margin: 0 2px; color: #777; }
+        
+        /* Grid de Atributos Principais */
+        .attributes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 15px; width: 100%; padding: 0 5px; }
+        .attr-item { display: flex; justify-content: space-between; align-items: center; }
+        .attr-label { font-family: monospace; font-size: 16px; color: #ccc; }
+        .attr-input { width: 35px !important; text-align: center; border-bottom: 1px solid #555 !important; font-size: 16px; font-weight: bold; }
+
+        /* Grid de Estatísticas Secundárias (Ouro, Deslocamento, Armadura, Dano) */
+        .sec-stats-grid { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px 15px; width: 100%; 
+            padding: 15px 5px 0 5px; margin-top: 15px; border-top: 1px dashed #555; 
+        }
+        .sec-stat-item { display: flex; justify-content: space-between; align-items: center; }
+        .sec-stat-icon { font-size: 18px; }
+        .sec-stat-input { width: 45px !important; text-align: center; border-bottom: 1px solid #555 !important; font-size: 14px; font-weight: bold; }
+        .dmg-input { width: 65px !important; }
+
+        /* Classe especial interativa para a Espada (Dano/Itens) */
+        .dmg-icon-btn { cursor: pointer; transition: transform 0.2s; display: inline-block; }
+        .dmg-icon-btn:hover { transform: scale(1.25); }
+
+        /* Container de Habilidades e Itens (Verso e Inventário Local) */
+        .list-container { display: flex; flex-direction: column; width: 100%; height: 230px; overflow-y: auto; padding-right: 5px; gap: 10px; }
+        .list-container::-webkit-scrollbar { width: 5px; }
+        .list-container::-webkit-scrollbar-track { background: transparent; }
+        .list-container::-webkit-scrollbar-thumb { background-color: #555; border-radius: 5px; }
+        
+        .list-item { background: #222; border-radius: 8px; padding: 10px; position: relative; border: 1px solid #444; }
+        .list-title { font-size: 14px; font-weight: bold; border-bottom: 1px dashed #555 !important; margin-bottom: 5px; text-align: left !important; padding-right: 20px;}
+        
+        .list-text { width: 100%; height: 90px; resize: none; font-family: inherit; font-size: 13px; line-height: 1.4; text-align: justify; }
+        .list-text::-webkit-scrollbar { width: 5px; }
+        .list-text::-webkit-scrollbar-track { background: transparent; }
+        .list-text::-webkit-scrollbar-thumb { background-color: #555; border-radius: 5px; }
+
+        .remove-list-btn { position: absolute; top: 5px; right: 5px; background: #ff4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        .add-list-btn { background: #333; color: #ccc; border: 1px dashed #666; border-radius: 8px; padding: 10px; cursor: pointer; text-align: center; transition: background 0.2s; font-size: 14px; }
+        .add-list-btn:hover { background: #444; color: white; }
+
+        .add-card-btn { background-color: transparent; border: 3px dashed #555; color: #555; width: 250px; border-radius: 15px; font-size: 60px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.2s; min-height: 520px; }
+        .add-card-btn:hover { border-color: #888; color: #888; }
+    </style>
+</head>
+<body>
+
+    <!-- Botões Fixos -->
+    <div class="side-buttons">
+        <button class="toggle-btn inv-btn" onclick="openNotes()" title="Anotações Gerais">🕮</button>
+    </div>
+
+    <!-- OVERLAY DAS ANOTAÇÕES GERAIS -->
+    <div id="notes-overlay" class="overlay">
+        <div class="overlay-header">
+            <h1 class="overlay-title">Anotações Gerais 🕮</h1>
+            <button class="close-overlay-btn" onclick="closeNotes()">Voltar às Cartas</button>
+        </div>
+        
+        <div class="notes-container">
+            <div class="notes-header-inputs">
+                <input type="text" id="globalRace" placeholder="RAÇA" oninput="saveGlobalNotes()">
+                <input type="text" id="globalClass" placeholder="CLASSE" oninput="saveGlobalNotes()">
+            </div>
+            <textarea id="globalText" class="notes-textarea" placeholder="Escreva as anotações da sua aventura aqui..." oninput="saveGlobalNotes()"></textarea>
+        </div>
+    </div>
+
+
+    <!-- Onde as cartas serão renderizadas -->
+    <div id="board" style="display: contents;"></div>
+    <div class="add-card-btn" onclick="addNewCard()">+</div>
+
+    <script>
+        // ========================================================
+        // 🕮 SISTEMA DE ANOTAÇÕES GERAIS 🕮
+        // ========================================================
+        let globalNotes = JSON.parse(localStorage.getItem('myNotes')) || { race: "", class: "", text: "" };
+
+        function initNotes() {
+            document.getElementById('globalRace').value = globalNotes.race;
+            document.getElementById('globalClass').value = globalNotes.class;
+            document.getElementById('globalText').value = globalNotes.text;
+        }
+
+        function openNotes() {
+            document.getElementById('notes-overlay').style.display = 'flex';
+        }
+
+        function closeNotes() {
+            document.getElementById('notes-overlay').style.display = 'none';
+        }
+
+        function saveGlobalNotes() {
+            globalNotes.race = document.getElementById('globalRace').value;
+            globalNotes.class = document.getElementById('globalClass').value;
+            globalNotes.text = document.getElementById('globalText').value;
+            localStorage.setItem('myNotes', JSON.stringify(globalNotes));
+        }
+
+        // Inicializa os textos salvos ao carregar a página
+        initNotes();
+
+
+        // === CÓDIGO DAS CARTAS ===
+        const board = document.getElementById('board');
+        const attrKeys = ["FOR", "AGL", "RES", "ASP", "SOR", "MAG", "INT", "HON"];
+        
+        let cardsData = JSON.parse(localStorage.getItem('myCards')) || [createEmptyCardData()];
+
+        // Função de migração
+        cardsData = cardsData.map(card => {
+            if (card.currentView === undefined) card.currentView = 0;
+            if (!card.attrs) card.attrs = { FOR: "", AGL: "", RES: "", ASP: "", SOR: "", MAG: "", INT: "", HON: "" };
+            if (card.hpCurrent === undefined) card.hpCurrent = "";
+            if (card.hpTotal === undefined) card.hpTotal = "";
+            if (card.mpCurrent === undefined) card.mpCurrent = "";
+            if (card.mpTotal === undefined) card.mpTotal = "";
+            
+            if (card.gold === undefined) card.gold = "";
+            if (card.speed === undefined) card.speed = "";
+            if (card.armor === undefined) card.armor = "";
+            if (card.dmg === undefined) card.dmg = "";
+
+            if (!card.abilities) card.abilities = [];
+            if (!card.items) card.items = []; 
+            return card;
+        });
+
+        function createEmptyCardData() {
+            return {
+                id: Date.now().toString(),
+                name: "", alias: "", image: "", number: "", isHidden: false,
+                currentView: 0, // 0 = Atributos, 1 = Habilidades, 2 = Itens
+                hpCurrent: "", hpTotal: "", mpCurrent: "", mpTotal: "",
+                gold: "", speed: "", armor: "", dmg: "",
+                attrs: { FOR: "", AGL: "", RES: "", ASP: "", SOR: "", MAG: "", INT: "", HON: "" },
+                abilities: [],
+                items: []
+            };
+        }
+
+        function saveCards() {
+            localStorage.setItem('myCards', JSON.stringify(cardsData));
+        }
+
+        function renderAllCards() {
+            board.innerHTML = '';
+            cardsData.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `card ${card.isHidden ? 'hidden-card' : ''}`;
+                
+                let bottomContent = '';
+
+                // === VISÃO 1: HABILIDADES ===
+                if (card.currentView === 1) {
+                    let abilitiesHtml = card.abilities.map((ab, abIndex) => `
+                        <div class="list-item">
+                            <button class="remove-list-btn" onclick="removeAbility(${index}, ${abIndex})" title="Remover">X</button>
+                            <input type="text" class="list-title" placeholder="Nome da Habilidade" value="${ab.title}" oninput="updateAbility(${index}, ${abIndex}, 'title', this.value)">
+                            <textarea class="list-text" placeholder="Descrição..." oninput="updateAbility(${index}, ${abIndex}, 'text', this.value)">${ab.text}</textarea>
+                        </div>
+                    `).join('');
+                    
+                    bottomContent = `
+                        <div class="list-container">
+                            ${abilitiesHtml}
+                            <button class="add-list-btn" onclick="addAbility(${index})">+ Nova Habilidade</button>
+                        </div>
+                    `;
+                } 
+                // === VISÃO 2: ITENS DA CARTA ===
+                else if (card.currentView === 2) {
+                    let itemsHtml = card.items.map((it, itIndex) => `
+                        <div class="list-item">
+                            <button class="remove-list-btn" onclick="removeCardItem(${index}, ${itIndex})" title="Remover">X</button>
+                            <input type="text" class="list-title" placeholder="Nome do Item" value="${it.title}" oninput="updateCardItem(${index}, ${itIndex}, 'title', this.value)">
+                            <textarea class="list-text" placeholder="Descrição do item..." oninput="updateCardItem(${index}, ${itIndex}, 'text', this.value)">${it.text}</textarea>
+                        </div>
+                    `).join('');
+                    
+                    bottomContent = `
+                        <div class="list-container">
+                            ${itemsHtml}
+                            <button class="add-list-btn" onclick="addCardItem(${index})">+ Novo Item</button>
+                        </div>
+                    `;
+                }
+                // === VISÃO 0: ATRIBUTOS (FRENTE) ===
+                else {
+                    let attrsHtml = attrKeys.map(key => `
+                        <div class="attr-item">
+                            <span class="attr-label">${key}</span>
+                            <input type="text" class="attr-input" placeholder="00" value="${card.attrs[key]}" oninput="updateAttr(${index}, '${key}', this.value)">
+                        </div>
+                    `).join('');
+
+                    bottomContent = `
+                        <div class="vitals-row">
+                            <span style="color:#ff4d4d;">❤︎</span>
+                            <input type="text" class="vital-input" placeholder="00" value="${card.hpCurrent}" oninput="updateData(${index}, 'hpCurrent', this.value)">
+                            <span class="vital-separator">-</span>
+                            <input type="text" class="vital-input" placeholder="00" value="${card.hpTotal}" oninput="updateData(${index}, 'hpTotal', this.value)">
+                            
+                            <span style="color:#00bfff; margin-left:15px;">⛥</span>
+                            <input type="text" class="vital-input" placeholder="00" value="${card.mpCurrent}" oninput="updateData(${index}, 'mpCurrent', this.value)">
+                            <span class="vital-separator">-</span>
+                            <input type="text" class="vital-input" placeholder="00" value="${card.mpTotal}" oninput="updateData(${index}, 'mpTotal', this.value)">
+                        </div>
+                        <div class="attributes-grid">
+                            ${attrsHtml}
+                        </div>
+                        <div class="sec-stats-grid">
+                            <div class="sec-stat-item">
+                                <span class="sec-stat-icon" style="color: #ffd700;" title="Ouro">⛁</span>
+                                <input type="text" class="sec-stat-input" placeholder="0000" value="${card.gold}" oninput="updateData(${index}, 'gold', this.value)">
+                            </div>
+                            <div class="sec-stat-item">
+                                <span class="sec-stat-icon" style="color: #ffffff;" title="Deslocamento">🕊</span>
+                                <input type="text" class="sec-stat-input" placeholder="00" value="${card.speed}" oninput="updateData(${index}, 'speed', this.value)">
+                            </div>
+                            <div class="sec-stat-item">
+                                <span class="sec-stat-icon" style="color: #aaaaaa;" title="Armadura">⛉</span>
+                                <input type="text" class="sec-stat-input" placeholder="00" value="${card.armor}" oninput="updateData(${index}, 'armor', this.value)">
+                            </div>
+                            <div class="sec-stat-item">
+                                <span class="sec-stat-icon dmg-icon-btn" style="color: #ff4d4d;" onclick="switchView(${index}, 2)" title="Ver Itens (Inventário)">🗡</span>
+                                <input type="text" class="sec-stat-input dmg-input" placeholder="1d6+3" value="${card.dmg}" oninput="updateData(${index}, 'dmg', this.value)">
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Dado Centralizado (se visão=0 vai pra 1; se visão=1 ou 2 volta pra 0)
+                let diceAction = (card.currentView === 0) ? 1 : 0;
+                let diceTitle = (card.currentView === 0) ? "Ver Habilidades" : "Voltar aos Atributos";
+
+                cardEl.innerHTML = `
+                    <div class="action-btns">
+                        <button class="action-btn hide-btn" onclick="toggleHidden(${index})" title="${card.isHidden ? 'Mostrar carta' : 'Ocultar carta'}">♦</button>
+                        <button class="action-btn delete-btn" onclick="deleteCard(${index})" title="Excluir carta">X</button>
+                    </div>
+                    <div class="hidden-overlay">
+                        <span class="question-mark">?</span>
+                        <span class="hover-name">${card.name || '???'}</span>
+                    </div>
+                    <div class="card-content">
+                        <input type="text" class="char-name" placeholder="NOME DO PERSONAGEM" value="${card.name}" oninput="updateData(${index}, 'name', this.value)">
+                        <input type="text" class="char-alias" placeholder="ALCUNHA" value="${card.alias}" oninput="updateData(${index}, 'alias', this.value)">
+                        <div class="image-container" onclick="document.getElementById('file-${card.id}').click()">
+                            <span style="display: ${card.image ? 'none' : 'block'}">Clique p/ Imagem</span>
+                            <img src="${card.image}" style="display: ${card.image ? 'block' : 'none'}">
+                            <input type="file" id="file-${card.id}" class="file-input" accept="image/*" onchange="handleImageUpload(event, ${index})">
+                        </div>
+                        <div class="dice-row">
+                            <span class="dice-icon" onclick="switchView(${index}, ${diceAction})" title="${diceTitle}">⚅</span>
+                            <input type="number" placeholder="0" value="${card.number}" oninput="updateData(${index}, 'number', this.value)">
+                        </div>
+                        ${bottomContent}
+                    </div>
+                `;
+                board.appendChild(cardEl);
+            });
+        }
+
+        function toggleHidden(cardIndex) { cardsData[cardIndex].isHidden = !cardsData[cardIndex].isHidden; saveCards(); renderAllCards(); }
+        function switchView(cardIndex, viewId) { cardsData[cardIndex].currentView = viewId; saveCards(); renderAllCards(); }
+        function updateData(cardIndex, field, value) { cardsData[cardIndex][field] = value; saveCards(); }
+        function updateAttr(cardIndex, attr, value) { cardsData[cardIndex].attrs[attr] = value; saveCards(); }
+        
+        function addAbility(cardIndex) { cardsData[cardIndex].abilities.push({ title: "", text: "" }); saveCards(); renderAllCards(); }
+        function updateAbility(cardIndex, abIndex, field, value) { cardsData[cardIndex].abilities[abIndex][field] = value; saveCards(); }
+        function removeAbility(cardIndex, abIndex) { if(confirm("Remover esta habilidade?")) { cardsData[cardIndex].abilities.splice(abIndex, 1); saveCards(); renderAllCards(); } }
+
+        function addCardItem(cardIndex) { cardsData[cardIndex].items.push({ title: "", text: "" }); saveCards(); renderAllCards(); }
+        function updateCardItem(cardIndex, itIndex, field, value) { cardsData[cardIndex].items[itIndex][field] = value; saveCards(); }
+        function removeCardItem(cardIndex, itIndex) { if(confirm("Remover este item do personagem?")) { cardsData[cardIndex].items.splice(itIndex, 1); saveCards(); renderAllCards(); } }
+
+        function addNewCard() { cardsData.push(createEmptyCardData()); saveCards(); renderAllCards(); }
+        function deleteCard(cardIndex) { if(confirm("Tem certeza que deseja excluir esta carta?")) { cardsData.splice(cardIndex, 1); saveCards(); renderAllCards(); } }
+
+        function handleImageUpload(event, cardIndex) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const size = 300; canvas.width = size; canvas.height = size;
+                    const minDim = Math.min(img.width, img.height);
+                    const startX = (img.width - minDim) / 2; const startY = (img.height - minDim) / 2;
+                    ctx.drawImage(img, startX, startY, minDim, minDim, 0, 0, size, size);
+                    cardsData[cardIndex].image = canvas.toDataURL('image/jpeg', 0.8);
+                    saveCards(); renderAllCards();
+                }
+                img.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        renderAllCards();
+    </script>
+</body>
+</html>
